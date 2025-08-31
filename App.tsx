@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { RecordingStatus } from './types';
+import { RecordingStatus, AudioSource } from './types';
 import URLInput from './components/URLInput';
 import RecordingDisplay from './components/RecordingDisplay';
 import DownloadCard from './components/DownloadCard';
@@ -18,7 +18,7 @@ const App: React.FC = () => {
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
-  const [includeMic, setIncludeMic] = useState<boolean>(false);
+  const [audioSource, setAudioSource] = useState<AudioSource>('tab');
   const [fileExtension, setFileExtension] = useState<string>('webm');
   const [usingOpfs, setUsingOpfs] = useState<boolean>(false);
   
@@ -160,7 +160,7 @@ const App: React.FC = () => {
       const displayStream = mediaStream;
       let userMicStream: MediaStream | null = null;
       
-      if (includeMic) {
+      if (audioSource === 'tab_and_mic') {
         try {
           userMicStream = await navigator.mediaDevices.getUserMedia({
             audio: {
@@ -188,34 +188,39 @@ const App: React.FC = () => {
 
       const hasDisplayAudio = displayStream.getAudioTracks().length > 0;
       const hasMicAudio = userMicStream && userMicStream.getAudioTracks().length > 0;
+      const wantsAudio = audioSource === 'tab' || audioSource === 'tab_and_mic';
+      const hasAnyAudio = hasDisplayAudio || (hasMicAudio && audioSource === 'tab_and_mic');
 
-      if (!hasDisplayAudio && !hasMicAudio) {
+      if (wantsAudio && !hasAnyAudio) {
         displayStream.getTracks().forEach(track => track.stop());
         userMicStream?.getTracks().forEach(track => track.stop());
-        setError("Recording failed: No audio source available. Please share tab audio or ensure your microphone is working and permission is granted.");
+        setError("Recording failed: No audio source available for your selected option. Please share tab audio or ensure your microphone is working.");
         setStatus(RecordingStatus.IDLE);
         setMicStream(null);
         setMediaStream(null);
         return;
       }
-
-      if (!hasDisplayAudio && hasMicAudio) {
+      
+      if (audioSource === 'tab' && !hasDisplayAudio) {
+        setWarning("Tab audio not detected. Recording video without audio.");
+      } else if (audioSource === 'tab_and_mic' && !hasDisplayAudio && hasMicAudio) {
         setWarning("Tab audio not detected. Recording with microphone audio only.");
       }
 
+
       let finalStream: MediaStream;
 
-      if (hasDisplayAudio || hasMicAudio) {
+      if (wantsAudio && hasAnyAudio) {
         audioContextRef.current = new AudioContext();
         const audioContext = audioContextRef.current;
         const destination = audioContext.createMediaStreamDestination();
 
-        if (hasDisplayAudio) {
+        if (hasDisplayAudio && (audioSource === 'tab' || audioSource === 'tab_and_mic')) {
           const displaySource = audioContext.createMediaStreamSource(displayStream);
           displaySource.connect(destination);
         }
         
-        if (hasMicAudio) {
+        if (hasMicAudio && audioSource === 'tab_and_mic') {
           const micSource = audioContext.createMediaStreamSource(userMicStream!);
           micSource.connect(destination);
         }
@@ -224,7 +229,7 @@ const App: React.FC = () => {
         const videoTracks = displayStream.getVideoTracks();
         finalStream = new MediaStream([...videoTracks, ...audioTracks]);
       } else {
-        // This case is unlikely to be reached due to the check above, but it's a safe fallback.
+        // No audio wanted or available.
         finalStream = new MediaStream(displayStream.getVideoTracks());
       }
       
@@ -278,7 +283,7 @@ const App: React.FC = () => {
       setError("Failed to start recording. Please try selecting the screen again.");
       setStatus(RecordingStatus.IDLE);
     }
-  }, [recordedUrl, includeMic, usingOpfs, mediaStream]);
+  }, [recordedUrl, audioSource, usingOpfs, mediaStream]);
 
   const handleReset = useCallback(async () => {
     if (recordedUrl) {
@@ -311,7 +316,7 @@ const App: React.FC = () => {
     setMicStream(null);
     setMediaRecorder(null);
     setRecordedUrl(null);
-    setIncludeMic(false);
+    setAudioSource('tab');
     recordedChunks.current = [];
   }, [recordedUrl, mediaStream, micStream]);
 
@@ -323,8 +328,8 @@ const App: React.FC = () => {
             mediaStream={mediaStream}
             onStartRecording={handleStartRecording}
             onCancel={handleReset}
-            includeMic={includeMic}
-            setIncludeMic={setIncludeMic}
+            audioSource={audioSource}
+            setAudioSource={setAudioSource}
             error={error}
           />
         );

@@ -1,15 +1,47 @@
 import React, { useRef, useEffect } from 'react';
+import { AudioSource } from '../types';
 
 interface PreviewDisplayProps {
   mediaStream: MediaStream | null;
   onStartRecording: () => void;
   onCancel: () => void;
-  includeMic: boolean;
-  setIncludeMic: (include: boolean) => void;
+  audioSource: AudioSource;
+  setAudioSource: (source: AudioSource) => void;
   error: string | null;
 }
 
-const PreviewDisplay: React.FC<PreviewDisplayProps> = ({ mediaStream, onStartRecording, onCancel, includeMic, setIncludeMic, error }) => {
+const RadioOption: React.FC<{
+  id: string;
+  value: AudioSource;
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (source: AudioSource) => void;
+}> = ({ id, value, label, description, checked, onChange }) => (
+  <label
+    htmlFor={id}
+    className={`flex items-center p-3 rounded-md cursor-pointer transition-colors ${
+      checked ? 'bg-red-900/50 border border-red-700' : 'hover:bg-gray-600/50 border border-transparent'
+    }`}
+  >
+    <input
+      type="radio"
+      id={id}
+      name="audioSource"
+      value={value}
+      checked={checked}
+      onChange={(e) => onChange(e.target.value as AudioSource)}
+      className="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 focus:ring-red-500 focus:ring-offset-gray-800"
+    />
+    <div className="ml-3 text-sm">
+      <span className="font-medium text-gray-200">{label}</span>
+      <p className="text-gray-400">{description}</p>
+    </div>
+  </label>
+);
+
+
+const PreviewDisplay: React.FC<PreviewDisplayProps> = ({ mediaStream, onStartRecording, onCancel, audioSource, setAudioSource, error }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -38,18 +70,35 @@ const PreviewDisplay: React.FC<PreviewDisplayProps> = ({ mediaStream, onStartRec
 
       {error && <p className="text-red-400 text-sm text-center">{error}</p>}
 
-      <div className="w-full">
-        <label htmlFor="include-mic-preview" className="flex items-center gap-2 text-gray-300 cursor-pointer">
-          <input
-            type="checkbox"
-            id="include-mic-preview"
-            checked={includeMic}
-            onChange={(e) => setIncludeMic(e.target.checked)}
-            className="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-offset-gray-800"
+      <fieldset className="w-full">
+        <legend className="text-gray-300 font-semibold mb-2">Audio Source</legend>
+        <div className="flex flex-col gap-2 rounded-lg bg-gray-700/50 p-3">
+          <RadioOption
+            id="audio-tab"
+            value="tab"
+            label="Tab Audio"
+            description="Record audio from the selected screen or tab."
+            checked={audioSource === 'tab'}
+            onChange={setAudioSource}
           />
-          Include microphone audio
-        </label>
-      </div>
+          <RadioOption
+            id="audio-tab-mic"
+            value="tab_and_mic"
+            label="Tab Audio + Microphone"
+            description="Mix tab audio with your microphone."
+            checked={audioSource === 'tab_and_mic'}
+            onChange={setAudioSource}
+          />
+          <RadioOption
+            id="audio-none"
+            value="none"
+            label="No Audio"
+            description="Record video only."
+            checked={audioSource === 'none'}
+            onChange={setAudioSource}
+          />
+        </div>
+      </fieldset>
       
       <div className="w-full flex flex-col sm:flex-row gap-4 mt-2">
          <button
