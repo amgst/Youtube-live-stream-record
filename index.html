@@ -60,6 +60,15 @@
   </head>
   <body class="bg-gray-900 text-white">
     <div id="root"></div>
+
+    <!-- Explicitly configure Tailwind to use the media strategy for dark mode. -->
+    <!-- This helps avoid a potential issue in the Tailwind CDN script's automatic detection -->
+    <!-- logic, which can be affected by browser extensions. -->
+    <script>
+      tailwind.config = {
+        darkMode: 'media',
+      }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
   </body>
 </html>
