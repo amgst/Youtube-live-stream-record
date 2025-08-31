@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { formatTime } from '../utils/time';
 
 interface DownloadCardProps {
@@ -11,6 +11,7 @@ interface DownloadCardProps {
 }
 
 const DownloadCard: React.FC<DownloadCardProps> = ({ videoId, duration, title, recordedUrl, onRecordAnother, fileExtension }) => {
+  const [fileName, setFileName] = useState<string>(title);
     
   return (
     <div className="flex flex-col items-center gap-6 text-center">
@@ -27,16 +28,25 @@ const DownloadCard: React.FC<DownloadCardProps> = ({ videoId, duration, title, r
              <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">No preview</div>
           )}
         </div>
-        <div className="flex-grow text-left">
-          <h3 className="font-bold text-lg leading-tight">{title}</h3>
+        <div className="flex-grow text-left w-full flex flex-col gap-2">
+           <div>
+            <label htmlFor="file-name" className="text-xs text-gray-400">File Name</label>
+            <input
+              type="text"
+              id="file-name"
+              value={fileName}
+              onChange={(e) => setFileName(e.target.value)}
+              className="w-full bg-gray-600 border border-gray-500 text-white rounded-md p-2 text-base font-semibold focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
+            />
+          </div>
           <p className="text-gray-400 text-sm">Duration: {formatTime(duration)}</p>
-          <p className="text-gray-500 text-xs mt-1">File Type: {fileExtension.toUpperCase()} Video</p>
+          <p className="text-gray-500 text-xs">File Type: {fileExtension.toUpperCase()} Video</p>
         </div>
       </div>
       <div className="w-full flex flex-col sm:flex-row gap-4">
         <a
           href={recordedUrl || '#'}
-          download={recordedUrl ? `${title.replace(/\s+/g, '_')}.${fileExtension}` : undefined}
+          download={recordedUrl ? `${fileName.replace(/\s+/g, '_') || 'recording'}.${fileExtension}` : undefined}
           onClick={(e) => !recordedUrl && e.preventDefault()}
           className={`w-full flex-1 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors duration-300 transform active:scale-95 ${!recordedUrl && 'opacity-50 cursor-not-allowed'}`}
         >

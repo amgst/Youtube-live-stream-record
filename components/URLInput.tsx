@@ -3,14 +3,11 @@ import React from 'react';
 interface URLInputProps {
   url: string;
   setUrl: (url: string) => void;
-  onStart: () => void;
+  onSelectScreen: () => void;
   error: string | null;
-  disabled: boolean;
-  includeMic: boolean;
-  setIncludeMic: (include: boolean) => void;
 }
 
-const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onStart, error, disabled, includeMic, setIncludeMic }) => {
+const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onSelectScreen, error }) => {
   return (
     <div className="flex flex-col gap-4 items-center">
       <div className="w-full">
@@ -26,34 +23,24 @@ const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onStart, error, disabl
             id="youtube-url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste YouTube live stream URL here..."
+            placeholder="Paste YouTube URL for thumbnail (optional)..."
             className="w-full bg-gray-700 border border-gray-600 text-white rounded-lg p-3 pl-10 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
           />
         </div>
+         <p className="text-gray-400 text-xs text-center mt-2 w-full max-w-md">
+          The app records your screen or a browser tab, not the URL directly.
+        </p>
         {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
       </div>
-       <div className="w-full flex justify-start">
-        <label htmlFor="include-mic" className="flex items-center gap-2 text-gray-300 cursor-pointer">
-          <input 
-            type="checkbox" 
-            id="include-mic" 
-            checked={includeMic} 
-            onChange={(e) => setIncludeMic(e.target.checked)}
-            className="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-offset-gray-800"
-          />
-          Include microphone audio
-        </label>
-      </div>
+     
       <button
-        onClick={onStart}
-        disabled={disabled}
-        className="w-full flex items-center justify-center gap-2 bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform active:scale-95 shadow-lg shadow-red-900/40"
+        onClick={onSelectScreen}
+        className="w-full mt-2 flex items-center justify-center gap-2 bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-300 transform active:scale-95 shadow-lg shadow-red-900/40"
       >
-         <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm0 18a8 8 0 1 1 8-8 8.009 8.009 0 0 1-8 8Z"/>
-            <path d="M12 7.5a4.5 4.5 0 1 0 4.5 4.5A4.505 4.505 0 0 0 12 7.5Z"/>
-        </svg>
-        <span>Start Recording</span>
+         <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25A2.25 2.25 0 0 1 5.25 3h13.5A2.25 2.25 0 0 1 21 5.25Z" />
+         </svg>
+        <span>Select Screen to Record</span>
       </button>
     </div>
   );

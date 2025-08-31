@@ -3,6 +3,7 @@ import { RecordingStatus } from './types';
 import URLInput from './components/URLInput';
 import RecordingDisplay from './components/RecordingDisplay';
 import DownloadCard from './components/DownloadCard';
+import PreviewDisplay from './components/PreviewDisplay';
 import { extractYouTubeID } from './utils/youtube';
 
 const App: React.FC = () => {
@@ -50,15 +51,17 @@ const App: React.FC = () => {
     }
   }, [mediaRecorder]);
   
-  // Effect to handle user stopping sharing from the browser's native UI
   useEffect(() => {
     const stream = mediaStream;
     if (stream) {
       const onStreamEnded = () => {
-         // Check status via a callback to ensure we have the latest state
          setStatus(currentStatus => {
-            if (currentStatus === RecordingStatus.RECORDING) {
+            if (currentStatus === RecordingStatus.RECORDING || currentStatus === RecordingStatus.PREVIEW) {
                 handleStopRecording();
+                // If we were just previewing, reset to idle
+                if (currentStatus === RecordingStatus.PREVIEW) {
+                    handleReset();
+                }
             }
             return currentStatus;
          });
@@ -77,21 +80,47 @@ const App: React.FC = () => {
     }
   }, [mediaStream, handleStopRecording]);
 
+  const handleSelectScreen = useCallback(async () => {
+    setError(null);
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+      setMediaStream(null);
+    }
+
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      });
+      setMediaStream(displayStream);
+      setStatus(RecordingStatus.PREVIEW);
+    } catch (err) {
+      console.error("Error selecting screen:", err);
+      if (err instanceof DOMException && err.name === 'NotAllowedError') {
+        setError("Screen sharing permission was denied. Please try again.");
+      } else {
+        setError("Failed to select a screen. Your browser may not support this feature.");
+      }
+      setStatus(RecordingStatus.IDLE);
+    }
+  }, [mediaStream]);
+
 
   const handleStartRecording = useCallback(async () => {
+    if (!mediaStream) {
+        setError("No screen selected to record.");
+        setStatus(RecordingStatus.IDLE);
+        return;
+    }
     setError(null);
     setWarning(null);
-    if (!videoId) {
-      setError('Please enter a valid YouTube video URL.');
-      return;
-    }
+    
     if (recordedUrl) {
       URL.revokeObjectURL(recordedUrl);
       setRecordedUrl(null);
     }
     recordedChunks.current = [];
 
-    // Prioritize video/audio codecs for broad compatibility, avoiding Opus where possible.
     const MimeTypePriorities = [
       { mimeType: 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"', extension: 'mp4' },
       { mimeType: 'video/webm; codecs="vp9, vorbis"', extension: 'webm' },
@@ -113,7 +142,6 @@ const App: React.FC = () => {
     const { mimeType, extension: ext } = supportedConfig;
     setFileExtension(ext);
     
-    // Check for OPFS support for on-disk storage
     const opfsSupported = 'storage' in navigator && 'getDirectory' in navigator.storage;
     setUsingOpfs(opfsSupported);
 
@@ -124,32 +152,14 @@ const App: React.FC = () => {
         opfsWritableStreamRef.current = await opfsFileHandleRef.current.createWritable();
       } catch (opfsError) {
         console.warn("Could not initialize OPFS. Falling back to in-memory storage.", opfsError);
-        setUsingOpfs(false); // Fallback if there's an issue
+        setUsingOpfs(false);
       }
     }
 
     try {
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-      });
-
-      const hasDisplayAudio = displayStream.getAudioTracks().length > 0;
-
-      if (!hasDisplayAudio && !includeMic) {
-        displayStream.getTracks().forEach(track => track.stop());
-        setError("Recording failed. To record audio, please restart and check the 'Share tab audio' option in the browser prompt.");
-        setStatus(RecordingStatus.IDLE);
-        return;
-      }
-
-      if (!hasDisplayAudio && includeMic) {
-        setWarning("Tab audio not detected. Recording with microphone audio only.");
-      }
-
-      let finalStream = displayStream;
+      const displayStream = mediaStream;
       let userMicStream: MediaStream | null = null;
-
+      
       if (includeMic) {
         try {
           userMicStream = await navigator.mediaDevices.getUserMedia({
@@ -163,12 +173,38 @@ const App: React.FC = () => {
           setMicStream(userMicStream);
         } catch (micErr) {
            console.warn("Could not get microphone audio:", micErr);
-           setError("Could not access microphone. Recording system audio only if shared.");
+           if (micErr instanceof DOMException && (micErr.name === 'NotAllowedError' || micErr.name === 'PermissionDeniedError')) {
+              setError("Microphone permission denied. The recording was cancelled. Please restart and grant permission to include microphone audio.");
+              mediaStream.getTracks().forEach(track => track.stop());
+              setMediaStream(null);
+              setStatus(RecordingStatus.IDLE);
+              return;
+           } else {
+             setWarning("Could not access microphone. Recording will continue without it.");
+             userMicStream = null;
+           }
         }
       }
 
-      // Mix audio tracks if necessary
+      const hasDisplayAudio = displayStream.getAudioTracks().length > 0;
       const hasMicAudio = userMicStream && userMicStream.getAudioTracks().length > 0;
+
+      if (!hasDisplayAudio && !hasMicAudio) {
+        displayStream.getTracks().forEach(track => track.stop());
+        userMicStream?.getTracks().forEach(track => track.stop());
+        setError("Recording failed: No audio source available. Please share tab audio or ensure your microphone is working and permission is granted.");
+        setStatus(RecordingStatus.IDLE);
+        setMicStream(null);
+        setMediaStream(null);
+        return;
+      }
+
+      if (!hasDisplayAudio && hasMicAudio) {
+        setWarning("Tab audio not detected. Recording with microphone audio only.");
+      }
+
+      let finalStream: MediaStream;
+
       if (hasDisplayAudio || hasMicAudio) {
         audioContextRef.current = new AudioContext();
         const audioContext = audioContextRef.current;
@@ -188,10 +224,10 @@ const App: React.FC = () => {
         const videoTracks = displayStream.getVideoTracks();
         finalStream = new MediaStream([...videoTracks, ...audioTracks]);
       } else {
+        // This case is unlikely to be reached due to the check above, but it's a safe fallback.
         finalStream = new MediaStream(displayStream.getVideoTracks());
       }
       
-      setMediaStream(finalStream);
       const recorder = new MediaRecorder(finalStream, { mimeType });
 
       recorder.ondataavailable = (event) => {
@@ -207,7 +243,6 @@ const App: React.FC = () => {
       recorder.onstop = async () => {
         setStatus(RecordingStatus.PROCESSING);
         
-        // Clean up all streams and the audio context
         displayStream?.getTracks().forEach(track => track.stop());
         userMicStream?.getTracks().forEach(track => track.stop());
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
@@ -235,26 +270,21 @@ const App: React.FC = () => {
       setElapsedTime(0);
       setMediaRecorder(recorder);
 
-      recorder.start(1000); // Trigger ondataavailable every second
+      recorder.start(1000);
       setStatus(RecordingStatus.RECORDING);
 
     } catch (err) {
       console.error("Error starting screen recording:", err);
-      if (err instanceof DOMException && err.name === 'NotAllowedError') {
-        setError("Screen recording permission was denied. Please try again.");
-      } else {
-        setError("Failed to start recording. Your browser may not support this feature.");
-      }
+      setError("Failed to start recording. Please try selecting the screen again.");
       setStatus(RecordingStatus.IDLE);
     }
-  }, [videoId, recordedUrl, includeMic, usingOpfs]);
+  }, [recordedUrl, includeMic, usingOpfs, mediaStream]);
 
   const handleReset = useCallback(async () => {
     if (recordedUrl) {
       URL.revokeObjectURL(recordedUrl);
     }
     
-    // Clean up OPFS file if it exists
     if (opfsFileHandleRef.current) {
       try {
         const root = await navigator.storage.getDirectory();
@@ -287,6 +317,17 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (status) {
+      case RecordingStatus.PREVIEW:
+        return (
+           <PreviewDisplay
+            mediaStream={mediaStream}
+            onStartRecording={handleStartRecording}
+            onCancel={handleReset}
+            includeMic={includeMic}
+            setIncludeMic={setIncludeMic}
+            error={error}
+          />
+        );
       case RecordingStatus.RECORDING:
       case RecordingStatus.PROCESSING:
         return (
@@ -317,11 +358,8 @@ const App: React.FC = () => {
           <URLInput
             url={url}
             setUrl={setUrl}
-            onStart={handleStartRecording}
+            onSelectScreen={handleSelectScreen}
             error={error}
-            disabled={!url}
-            includeMic={includeMic}
-            setIncludeMic={setIncludeMic}
           />
         );
     }
