@@ -1,0 +1,8 @@
+{
+  "name": "YouTube Live Stream Recorder",
+  "description": "An application to record your screen, intended for capturing YouTube live streams. Select a window, tab, or your entire screen to start recording. The video is processed in your browser and can be downloaded directly.",
+  "requestFramePermissions": [
+    "display-capture",
+    "microphone"
+  ]
+}
