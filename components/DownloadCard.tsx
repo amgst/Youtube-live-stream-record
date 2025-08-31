@@ -7,9 +7,10 @@ interface DownloadCardProps {
   title: string;
   recordedUrl: string | null;
   onRecordAnother: () => void;
+  fileExtension: string;
 }
 
-const DownloadCard: React.FC<DownloadCardProps> = ({ videoId, duration, title, recordedUrl, onRecordAnother }) => {
+const DownloadCard: React.FC<DownloadCardProps> = ({ videoId, duration, title, recordedUrl, onRecordAnother, fileExtension }) => {
     
   return (
     <div className="flex flex-col items-center gap-6 text-center">
@@ -29,13 +30,13 @@ const DownloadCard: React.FC<DownloadCardProps> = ({ videoId, duration, title, r
         <div className="flex-grow text-left">
           <h3 className="font-bold text-lg leading-tight">{title}</h3>
           <p className="text-gray-400 text-sm">Duration: {formatTime(duration)}</p>
-          <p className="text-gray-500 text-xs mt-1">File Type: WEBM Video</p>
+          <p className="text-gray-500 text-xs mt-1">File Type: {fileExtension.toUpperCase()} Video</p>
         </div>
       </div>
       <div className="w-full flex flex-col sm:flex-row gap-4">
         <a
           href={recordedUrl || '#'}
-          download={recordedUrl ? `${title.replace(/\s+/g, '_')}.webm` : undefined}
+          download={recordedUrl ? `${title.replace(/\s+/g, '_')}.${fileExtension}` : undefined}
           onClick={(e) => !recordedUrl && e.preventDefault()}
           className={`w-full flex-1 flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors duration-300 transform active:scale-95 ${!recordedUrl && 'opacity-50 cursor-not-allowed'}`}
         >

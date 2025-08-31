@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface URLInputProps {
@@ -7,9 +6,11 @@ interface URLInputProps {
   onStart: () => void;
   error: string | null;
   disabled: boolean;
+  includeMic: boolean;
+  setIncludeMic: (include: boolean) => void;
 }
 
-const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onStart, error, disabled }) => {
+const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onStart, error, disabled, includeMic, setIncludeMic }) => {
   return (
     <div className="flex flex-col gap-4 items-center">
       <div className="w-full">
@@ -30,6 +31,18 @@ const URLInput: React.FC<URLInputProps> = ({ url, setUrl, onStart, error, disabl
           />
         </div>
         {error && <p className="text-red-400 text-sm mt-2 text-center">{error}</p>}
+      </div>
+       <div className="w-full flex justify-start">
+        <label htmlFor="include-mic" className="flex items-center gap-2 text-gray-300 cursor-pointer">
+          <input 
+            type="checkbox" 
+            id="include-mic" 
+            checked={includeMic} 
+            onChange={(e) => setIncludeMic(e.target.checked)}
+            className="w-4 h-4 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-offset-gray-800"
+          />
+          Include microphone audio
+        </label>
       </div>
       <button
         onClick={onStart}
