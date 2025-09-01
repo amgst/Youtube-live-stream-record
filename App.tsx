@@ -387,7 +387,13 @@ const App: React.FC = () => {
         </div>
       </main>
       
-      <footer className="mt-8 text-center text-gray-500 text-sm">
+      <footer className="mt-8 text-center text-gray-500 text-sm max-w-4xl">
+        <div className="mb-4 text-left">
+          <h2 className="text-lg font-semibold text-gray-300 mb-2">How to Record YouTube Live Streams</h2>
+          <p className="text-sm mb-2">Our free online screen recorder lets you capture YouTube live streams, gaming sessions, tutorials, and presentations directly in your browser. No software installation required.</p>
+          <p className="text-sm mb-2"><strong>Features:</strong> High-quality video recording, multiple audio sources (tab audio, microphone, or both), WebM and MP4 format support, completely free to use.</p>
+          <p className="text-sm"><strong>Compatible with:</strong> Chrome, Firefox, Edge, and other modern browsers supporting Screen Capture API.</p>
+        </div>
         <p>Built with React & Tailwind CSS</p>
       </footer>
     </div>

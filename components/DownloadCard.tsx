@@ -16,18 +16,27 @@ const DownloadCard: React.FC<DownloadCardProps> = ({ videoId, duration, title, r
   return (
     <div className="flex flex-col items-center gap-6 text-center">
       <h2 className="text-2xl font-bold text-green-400">Recording Complete!</h2>
-      <div className="w-full bg-gray-700/50 rounded-lg p-4 flex flex-col md:flex-row items-center gap-4 border border-gray-600">
-        <div className="w-32 h-20 md:w-48 md:h-28 flex-shrink-0 bg-black rounded-md overflow-hidden">
-          {videoId ? (
-            <img 
-              src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} 
-              alt="Video Thumbnail"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-             <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">No preview</div>
-          )}
-        </div>
+      <div className="w-full bg-gray-700/50 rounded-lg p-4 flex flex-col gap-4 border border-gray-600">
+        {recordedUrl && (
+          <video 
+            src={recordedUrl} 
+            controls 
+            preload="metadata"
+            className="w-full max-h-64 bg-black rounded-md"
+          />
+        )}
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="w-32 h-20 md:w-48 md:h-28 flex-shrink-0 bg-black rounded-md overflow-hidden">
+            {videoId ? (
+              <img 
+                src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} 
+                alt="Video Thumbnail"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+               <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs">No preview</div>
+            )}
+          </div>
         <div className="flex-grow text-left w-full flex flex-col gap-2">
            <div>
             <label htmlFor="file-name" className="text-xs text-gray-400">File Name</label>
@@ -41,6 +50,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({ videoId, duration, title, r
           </div>
           <p className="text-gray-400 text-sm">Duration: {formatTime(duration)}</p>
           <p className="text-gray-500 text-xs">File Type: {fileExtension.toUpperCase()} Video</p>
+          </div>
         </div>
       </div>
       <div className="w-full flex flex-col sm:flex-row gap-4">
